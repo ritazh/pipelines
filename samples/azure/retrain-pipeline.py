@@ -10,7 +10,7 @@ def sequential_pipeline():
 
   op1 = dsl.ContainerOp(
      name='retrain',
-     image='ritazh/image-retrain-kubecon:1.9-gpu',
+     image='ritazh/image-retrain-kubecon:1.9-gpu-pipe',
      arguments=[
           '--how_many_training_steps', 10,
           '--bottleneck_dir', '/tmp/bottlenecks',
@@ -21,7 +21,7 @@ def sequential_pipeline():
           '--saved_model_dir', 's3://mybucket/models/myjob2/export/inception/1',
           '--image_dir', 'images',
      ],
-     file_outputs={'output': 'myjob2'}
+     file_outputs={'output': '/model_name.txt'}
   ).add_env_variable(
         k8sc.V1EnvVar(
             name='TF_MODEL_DIR', 
@@ -79,11 +79,14 @@ def sequential_pipeline():
   op2 = dsl.ContainerOp(
      name='inception',
      image='elsonrodriguez/model-server:1.6',
-     command=['/usr/bin/tensorflow_model_server'],
+     command=[
+        '/usr/bin/tensorflow_model_server',
+     ],
      arguments=[
-        '--port', 9000,
-        '--model_name', 'inception',
-        '--model_base_path', 's3://mybucket/models/%s/export/inception/' % op1.output,
+        '--port=9000',
+        '--model_name=inception',
+        '--model_base_path=s3://mybucket/models/myjob2/export/inception/',
+        op1.output,
      ]
   ).add_env_variable(
         k8sc.V1EnvVar(
